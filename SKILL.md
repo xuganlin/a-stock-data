@@ -429,6 +429,7 @@ for r in reports[:5]:
 ```python
 import requests
 import pandas as pd
+from io import StringIO
 
 def ths_eps_forecast(code: str) -> pd.DataFrame:
     """
@@ -444,7 +445,7 @@ def ths_eps_forecast(code: str) -> pd.DataFrame:
     }
     r = requests.get(url, headers=headers, timeout=15)
     r.encoding = "gbk"
-    dfs = pd.read_html(r.text)
+    dfs = pd.read_html(StringIO(r.text))
     # 找含"每股收益"的表格
     for df in dfs:
         cols = [str(c) for c in df.columns]
@@ -1599,6 +1600,13 @@ llb = sina_financial_report("600519", "llb")
 
 ```python
 import requests
+from datetime import datetime
+
+def _cninfo_ts_to_date(ts):
+    """巨潮 announcementTime 返回 Unix 毫秒整数，需转换为日期字符串。"""
+    if isinstance(ts, (int, float)):
+        return datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d")
+    return str(ts)[:10] if ts else ""
 
 def cninfo_announcements(code: str, page_size: int = 30) -> list[dict]:
     """
@@ -1643,7 +1651,7 @@ def cninfo_announcements(code: str, page_size: int = 30) -> list[dict]:
         rows.append({
             "title": item.get("announcementTitle", ""),
             "type": item.get("announcementTypeName", ""),
-            "date": item.get("announcementTime", ""),
+            "date": _cninfo_ts_to_date(item.get("announcementTime")),
             "url": f"https://www.cninfo.com.cn/new/disclosure/detail?annoId={item.get('announcementId', '')}",
         })
     return rows
